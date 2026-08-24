@@ -49,12 +49,16 @@ Measured with `pixi run bench` on `Linux-6.8.0-136-generic-x86_64-with-glibc2.39
 
 | kernel | mojo-geohash2 | geohash2 1.1 | speedup | reference |
 | --- | ---: | ---: | ---: | --- |
-| encode 200k | 184.59 ms | 3255.49 ms | 17.64x | scalar Python loop |
-| decode_exactly 200k | 359.34 ms | 2683.39 ms | 7.47x | scalar Python loop |
+| encode 200k | 178.32 ms | 3291.93 ms | 18.46x | scalar Python loop |
+| decode_exactly 200k | 354.63 ms | 2582.81 ms | 7.28x | scalar Python loop |
 
 The scalar `encode`, `decode`, and `decode_exactly` calls use the same kernels but still pay Python/ctypes and small-array allocation overhead. Use the `*_many` functions when processing many locations.
 
-There is no GPU path.
+There is no GPU path. Both measured batch kernels already exceed the optimization
+cutoff versus upstream, and their end-to-end work includes CPU-side validation and
+conversion to Python strings. Moving only the interval-refinement arithmetic to a
+GPU would add transfers and launch overhead without removing that dominant host
+work, so a GPU implementation is not justified here.
 
 ## How it works
 
