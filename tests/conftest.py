@@ -5,6 +5,8 @@ import sys
 
 import pytest
 
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[1] / "bench"))
+
 
 @pytest.fixture(scope="session")
 def upstream_geohash2():

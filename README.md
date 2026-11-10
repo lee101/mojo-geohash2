@@ -45,12 +45,18 @@ The module builds `dist/libmojo-geohash2.so` on first use from this checkout. Se
 
 ## Benchmarks
 
-Measured with `pixi run bench` on `Linux-6.8.0-136-generic-x86_64-with-glibc2.39`, 200,000 random WGS84 coordinates at precision 12, best of three runs. The reference is the installed PyPI `geohash2` 1.1 scalar loop over the identical data.
+Measured with the `pixi run bench` task's own script on `Linux-6.8.0-147-generic-x86_64-with-glibc2.39`, 200,000 random WGS84 coordinates at precision 12, best of three runs. The data is generated with `numpy.random.default_rng(2026)` exactly once and passed to both sides; the bench asserts the Mojo and upstream encodings agree on every coordinate before timing anything.
+
+Rows labelled `scalar API` call the same public function on both sides, once per coordinate (`encode`) or once per hash (`decode_exactly`). Rows labelled `encode_many` / `decode_many` compare the Mojo batch extension against upstream's scalar loop, because upstream 1.1 has no batch entry point.
 
 | kernel | mojo-geohash2 | geohash2 1.1 | speedup | reference |
 | --- | ---: | ---: | ---: | --- |
-| encode 200k | 178.32 ms | 3291.93 ms | 18.46x | scalar Python loop |
-| decode_exactly 200k | 354.63 ms | 2582.81 ms | 7.28x | scalar Python loop |
+| encode 200k (scalar API) | 1984.73 ms | 3194.58 ms | 1.61x | scalar Python loop, same API |
+| decode_exactly 200k (scalar API) | 4842.87 ms | 2772.67 ms | 0.57x | scalar Python loop, same API |
+| encode 200k (encode_many) | 190.17 ms | 3367.31 ms | 17.71x | scalar Python loop, same API |
+| decode_exactly 200k (decode_many) | 346.93 ms | 2941.01 ms | 8.48x | scalar Python loop, same API |
+
+Three consecutive runs agreed within a few percent on every row. `decode_exactly 200k (scalar API)` is **slower** than upstream: each scalar call is a one-row FFI dispatch plus four NumPy allocations, while upstream does the same 60 bit steps as pure Python arithmetic.
 
 The scalar `encode`, `decode`, and `decode_exactly` calls use the same kernels but still pay Python/ctypes and small-array allocation overhead. Use the `*_many` functions when processing many locations.
 
